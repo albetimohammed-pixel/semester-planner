@@ -30,10 +30,6 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Fix package versions compatibility
-        run: |
-          sed -i 's/intl:.*/intl: ^0.20.3/' pubspec.yaml
-
       - name: Create main.dart if missing
         run: |
           if [ ! -f "lib/main.dart" ]; then
