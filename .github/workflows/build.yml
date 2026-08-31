@@ -28,6 +28,33 @@ jobs:
         run: |
           sed -i 's/intl:.*/intl: ^0.20.3/' pubspec.yaml
 
+      - name: Create main.dart if missing
+        run: |
+          if [ ! -f "lib/main.dart" ]; then
+            cat << 'EOF' > lib/main.dart
+          import 'package:flutter/material.dart';
+          import 'presentation/screens/splash/splash_screen.dart';
+
+          void main() {
+            WidgetsFlutterBinding.ensureInitialized();
+            runApp(const MyApp());
+          }
+
+          class MyApp extends StatelessWidget {
+            const MyApp({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return const MaterialApp(
+                title: 'Semester Planner',
+                debugShowCheckedModeBanner: false,
+                home: SplashScreen(),
+              );
+            }
+          }
+          EOF
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 
