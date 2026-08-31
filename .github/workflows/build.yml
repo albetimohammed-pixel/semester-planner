@@ -12,7 +12,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Extract Project ZIP
-        run: unzip -o semester_planner.zip
+        run: |
+          unzip -o semester_planner.zip
+          if [ -d "semester_planner" ]; then
+            cp -r semester_planner/* . 2>/dev/null || true
+            cp -r semester_planner/.* . 2>/dev/null || true
+          fi
 
       - uses: subosito/flutter-action@v2
         with:
@@ -30,4 +35,3 @@ jobs:
         with:
           name: semester-planner-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          
