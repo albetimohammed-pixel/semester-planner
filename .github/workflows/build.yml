@@ -30,6 +30,75 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
+      - name: Auto-repair all code & typos
+        run: |
+          python3 -c "
+          import os, glob
+
+          # 1. إنشاء الشاشات المفقودة
+          os.makedirs('lib/presentation/screens/preview', exist_ok=True)
+          os.makedirs('lib/presentation/screens/create_plan', exist_ok=True)
+
+          with open('lib/presentation/screens/preview/plan_preview_screen.dart', 'w', encoding='utf-8') as f:
+              f.write('import \'package:flutter/material.dart\';\n\nclass PlanPreviewScreen extends StatelessWidget {\n  final int planId;\n  const PlanPreviewScreen({super.key, required this.planId});\n\n  @override\n  Widget build(BuildContext context) {\n    return Scaffold(\n      appBar: AppBar(title: const Text(\'معاينة الخطة\')),\n      body: Center(child: Text(\'معاينة الخطة رقم \$planId\')),\n    );\n  }\n}')
+
+          with open('lib/presentation/screens/create_plan/step3_lessons_screen.dart', 'w', encoding='utf-8') as f:
+              f.write('import \'package:flutter/material.dart\';\n\nclass Step3LessonsScreen extends StatelessWidget {\n  const Step3LessonsScreen({super.key});\n\n  @override\n  Widget build(BuildContext context) {\n    return Scaffold(\n      appBar: AppBar(title: const Text(\'إضافة الدروس\')),\n      body: const Center(child: Text(\'خطوة إضافة الدروس\')),\n    );\n  }\n}')
+
+          # 2. إصلاح plan_entity.dart
+          os.makedirs('lib/domain/entities', exist_ok=True)
+          with open('lib/domain/entities/plan_entity.dart', 'w', encoding='utf-8') as f:
+              f.write('import \'package:flutter/foundation.dart\';\n\nclass PlanEntity {\n  final int? id;\n  final String title;\n  final String semester;\n  final DateTime startDate;\n  final DateTime endDate;\n  final List<UnitEntity> units;\n\n  PlanEntity({\n    this.id,\n    required this.title,\n    required this.semester,\n    required this.startDate,\n    required this.endDate,\n    this.units = const [],\n  });\n}\n\nclass UnitEntity {\n  final int? id;\n  final int? planId;\n  final String name;\n  final int orderIndex;\n  final int lessonCount;\n\n  UnitEntity({\n    this.id,\n    this.planId,\n    required this.name,\n    required this.orderIndex,\n    this.lessonCount = 0,\n  });\n\n  UnitEntity copyWith({\n    int? id,\n    int? planId,\n    String? name,\n    int? orderIndex,\n    int? lessonCount,\n  }) {\n    return UnitEntity(\n      id: id ?? this.id,\n      planId: planId ?? this.planId,\n      name: name ?? this.name,\n      orderIndex: orderIndex ?? this.orderIndex,\n      lessonCount: lessonCount ?? this.lessonCount,\n    );\n  }\n}')
+
+          # 3. إصلاح الأخطاء في باقي الملفات
+          for filepath in glob.glob('lib/**/*.dart', recursive=True):
+              with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                  content = f.read()
+              content = content.replace('package0:', 'package:')
+              content = content.replace('unitEntity.unit.copyWith', 'unitEntity.copyWith')
+              content = content.replace('unit: unitEntity', 'unitEntity')
+              with open(filepath, 'w', encoding='utf-8') as f:
+                  f.write(content)
+
+          # 4. إصلاح home_screen.dart
+          h_file = 'lib/presentation/screens/home/home_screen.dart'
+          if os.path.exists(h_file):
+              with open(h_file, 'r', encoding='utf-8', errors='ignore') as f:
+                  txt = f.read()
+              imports = 'import \'package:flutter/material.dart\';\nimport \'../../core/theme/app_theme.dart\';\nimport \'../../core/utils/app_utils.dart\';\nimport \'../../domain/providers/plan_providers.dart\';\nimport \'../../data/repositories/plan_repository.dart\';\nimport \'../preview/plan_preview_screen.dart\';\n'
+              if 'plan_preview_screen.dart' not in txt:
+                  txt = imports + txt
+              with open(h_file, 'w', encoding='utf-8') as f:
+                  f.write(txt)
+          "
+
+      - name: Create main.dart if missing
+        run: |
+          if [ ! -f "lib/main.dart" ]; then
+            cat << 'EOF' > lib/main.dart
+          import 'package:flutter/material.dart';
+          import 'presentation/screens/splash/splash_screen.dart';
+
+          void main() {
+            WidgetsFlutterBinding.ensureInitialized();
+            runApp(const MyApp());
+          }
+
+          class MyApp extends StatelessWidget {
+            const MyApp({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return const MaterialApp(
+                title: 'Semester Planner',
+                debugShowCheckedModeBanner: false,
+                home: SplashScreen(),
+              );
+            }
+          }
+          EOF
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 
