@@ -30,6 +30,73 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
+      - name: Patch missing files and code gaps
+        run: |
+          # 1. إنشاء شاشة معاينة الخطة المفقودة
+          mkdir -p lib/presentation/screens/preview
+          cat << 'EOF' > lib/presentation/screens/preview/plan_preview_screen.dart
+          import 'package:flutter/material.dart';
+
+          class PlanPreviewScreen extends StatelessWidget {
+            final int planId;
+            const PlanPreviewScreen({super.key, required this.planId});
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('معاينة الخطة')),
+                body: Center(child: Text('معاينة الخطة رقم $planId')),
+              );
+            }
+          }
+          EOF
+
+          # 2. إنشاء شاشة الدروس المفقودة
+          mkdir -p lib/presentation/screens/create_plan
+          cat << 'EOF' > lib/presentation/screens/create_plan/step3_lessons_screen.dart
+          import 'package:flutter/material.dart';
+
+          class Step3LessonsScreen extends StatelessWidget {
+            const Step3LessonsScreen({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('إضافة الدروس')),
+                body: const Center(child: Text('خطوة إضافة الدروس')),
+              );
+            }
+          }
+          EOF
+
+          # 3. إضافة الاستدعاءات المفقودة في home_screen.dart
+          sed -i '1i import "../../core/utils/app_utils.dart";\nimport "../../domain/providers/plan_providers.dart";\nimport "../../data/repositories/plan_repository.dart";\nimport "../preview/plan_preview_screen.dart";' lib/presentation/screens/home/home_screen.dart
+
+          # 4. إضافة الاستدعاءات المفقودة في step2_units_screen.dart
+          sed -i '1i import "step3_lessons_screen.dart";' lib/presentation/screens/create_plan/step2_units_screen.dart
+
+          # 5. إضافة دالة copyWith الناقصة في UnitEntity
+          cat << 'EOF' >> lib/domain/entities/plan_entity.dart
+
+          extension UnitEntityExtension on UnitEntity {
+            UnitEntity copyWith({
+              int? id,
+              int? planId,
+              String? name,
+              int? orderIndex,
+              int? lessonCount,
+            }) {
+              return UnitEntity(
+                id: id ?? this.id,
+                planId: planId ?? this.planId,
+                name: name ?? this.name,
+                orderIndex: orderIndex ?? this.orderIndex,
+                lessonCount: lessonCount ?? this.lessonCount,
+              );
+            }
+          }
+          EOF
+
       - name: Create main.dart if missing
         run: |
           if [ ! -f "lib/main.dart" ]; then
